@@ -2,6 +2,7 @@
 
 import { bilibiliAPI } from './api';
 import Store from 'electron-store';
+import { log } from '../utils/logger';
 
 interface AuthData {
   cookie: string;
@@ -13,6 +14,7 @@ const store = new Store<AuthData>({ name: 'auth' });
 
 export class AuthManager {
   private static instance: AuthManager;
+  private loginStatus: boolean = false;
 
   private constructor() {}
 
@@ -28,12 +30,25 @@ export class AuthManager {
   }
 
   async pollQRStatus(qrKey: string): Promise<{ success: boolean; cookie?: string }> {
+    log(`[Auth] Polling QR status for key: ${qrKey.substring(0, 10)}...`);
     const result = await bilibiliAPI.pollQRStatus(qrKey);
+    const apiCookie = bilibiliAPI.getCookie();
+    log(`[Auth] QR poll result: ${JSON.stringify({ success: result.success, apiHasCookie: !!apiCookie })}`);
     
     if (result.success) {
-      // In real implementation, cookie comes from response
       const cookie = bilibiliAPI.getCookie();
-      await this.saveCookie(cookie);
+      log(`[Auth] QR login successful, bilibiliAPI.getCookie(): ${cookie ? `${cookie.substring(0, 30)}...` : 'NONE'}`);
+      
+      if (cookie) {
+        await this.saveCookie(cookie);
+        log(`[Auth] Cookie saved to store`);
+        // Make sure to set loginStatus
+        this.loginStatus = true;
+        log(`[Auth] loginStatus set to: ${this.loginStatus}`);
+      } else {
+        log(`[Auth] WARNING: Login success but no cookie!`);
+      }
+      
       return { success: true, cookie };
     }
     
@@ -42,15 +57,19 @@ export class AuthManager {
 
   async importCookie(cookie: string): Promise<boolean> {
     try {
+      console.log('[Auth] Importing cookie:', cookie ? `${cookie.substring(0, 20)}...` : 'empty');
       bilibiliAPI.setCookie(cookie);
       const isValid = await bilibiliAPI.checkLogin();
+      console.log('[Auth] Cookie import validation:', isValid);
       
       if (isValid) {
         await this.saveCookie(cookie);
+        this.loginStatus = true;
         return true;
       }
       return false;
-    } catch {
+    } catch (e) {
+      console.error('[Auth] Cookie import error:', e);
       return false;
     }
   }
@@ -66,26 +85,46 @@ export class AuthManager {
   loadCookie(): string | null {
     const data = store.store;
     if (data && data.expireTime && Date.now() < data.expireTime) {
-      return data.cookie;
+      const cookie = data.cookie;
+      console.log('[Auth] Loaded cookie from store:', cookie ? `${cookie.substring(0, 30)}...` : 'none');
+      // Also set it in bilibiliAPI
+      if (cookie) {
+        bilibiliAPI.setCookie(cookie);
+      }
+      return cookie;
     }
+    console.log('[Auth] No valid cookie in store');
     return null;
   }
 
   async validateCookie(): Promise<boolean> {
+    // Only validate if user explicitly requests it (not on app startup)
     const cookie = this.loadCookie();
-    if (!cookie) return false;
+    console.log('[Auth] validateCookie called, has stored cookie:', !!cookie);
+    if (!cookie) {
+      this.loginStatus = false;
+      return false;
+    }
     
     bilibiliAPI.setCookie(cookie);
-    return await bilibiliAPI.checkLogin();
+    const isValid = await bilibiliAPI.checkLogin();
+    console.log('[Auth] Cookie validation result:', isValid);
+    this.loginStatus = isValid;
+    return isValid;
   }
 
   async logout(): Promise<void> {
+    log('[Auth] Logout requested');
+    log('[Auth] Store before clear: ' + JSON.stringify({ hasCookie: !!store.get('cookie') }));
     store.clear();
+    log('[Auth] Store after clear: ' + JSON.stringify({ hasCookie: !!store.get('cookie') }));
     bilibiliAPI.setCookie('');
+    this.loginStatus = false;
+    log('[Auth] Logout complete, loginStatus: false');
   }
 
   isLoggedIn(): boolean {
-    return bilibiliAPI.getCookie() !== '';
+    return this.loginStatus;
   }
 }
 

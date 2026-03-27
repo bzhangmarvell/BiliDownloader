@@ -18,22 +18,34 @@ export default function SettingsPage({ isLoggedIn, setIsLoggedIn }: SettingsPage
   const [speedLimit, setSpeedLimit] = useState(0);
 
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout;
+    let pollInterval: NodeJS.Timeout | null = null;
     
-    if (showQRCode && qrKey) {
+    console.log('[Settings] useEffect: showQRCode=', showQRCode, 'qrKey=', qrKey ? qrKey.substring(0, 10) + '...' : 'none');
+    
+    // Only start polling if we have a valid qrKey
+    if (showQRCode && qrKey && qrKey.length > 5) {
+      console.log('[Settings] Starting QR poll interval for key:', qrKey.substring(0, 10) + '...');
       pollInterval = setInterval(async () => {
+        console.log('[Settings] Polling QR status...');
         const result = await window.auth.pollQRStatus(qrKey);
+        console.log('[Settings] QR poll result:', result);
         if (result.success) {
+          console.log('[Settings] QR login successful!');
           setQrStatus('登录成功!');
           setIsLoggedIn(true);
           setShowQRCode(false);
-          clearInterval(pollInterval);
+          if (pollInterval) clearInterval(pollInterval);
+          pollInterval = null;
         }
       }, 2000);
     }
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval);
+      if (pollInterval) {
+        console.log('[Settings] Clearing poll interval');
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
     };
   }, [showQRCode, qrKey, setIsLoggedIn]);
 
@@ -65,8 +77,13 @@ export default function SettingsPage({ isLoggedIn, setIsLoggedIn }: SettingsPage
   };
 
   const handleLogout = async () => {
+    console.log('[Settings] Logout requested');
     await window.auth.logout();
+    console.log('[Settings] Logout completed, updating state');
     setIsLoggedIn(false);
+    setShowQRCode(false);
+    setQrStatus('');
+    console.log('[Settings] State updated, isLoggedIn should be false');
   };
 
   const handleSaveConfig = async () => {

@@ -1,6 +1,6 @@
 // src/renderer/src/pages/Tasks.tsx
 
-import React from 'react';
+import React, { useState } from 'react';
 import TaskItem from '../components/TaskItem';
 import './Tasks.css';
 

@@ -8,6 +8,7 @@ import fs from 'fs';
 export interface DownloadRecord {
   id: string;
   bvid: string;
+  aid: number;
   cid: number;
   title: string;
   cover: string;
@@ -50,6 +51,7 @@ export function initDatabase(): Database.Database {
     CREATE TABLE IF NOT EXISTS downloads (
       id TEXT PRIMARY KEY,
       bvid TEXT NOT NULL,
+      aid INTEGER NOT NULL,
       cid INTEGER NOT NULL,
       title TEXT,
       cover TEXT,
@@ -81,6 +83,13 @@ export function initDatabase(): Database.Database {
     CREATE INDEX IF NOT EXISTS idx_downloads_status ON downloads(status);
   `);
 
+  // Add aid column if not exists (for existing databases)
+  try {
+    db.prepare('ALTER TABLE downloads ADD COLUMN aid INTEGER').run();
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   return db;
 }
 
@@ -103,12 +112,13 @@ export function insertDownload(record: Omit<DownloadRecord, 'created_at' | 'comp
   const database = getDatabase();
   const stmt = database.prepare(`
     INSERT OR REPLACE INTO downloads 
-    (id, bvid, cid, title, cover, quality, file_path, file_size, status, created_at, completed_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
+    (id, bvid, aid, cid, title, cover, quality, file_path, file_size, status, created_at, completed_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
   `);
   stmt.run(
     record.id,
     record.bvid,
+    record.aid,
     record.cid,
     record.title,
     record.cover,

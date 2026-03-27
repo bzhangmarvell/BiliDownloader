@@ -64,8 +64,13 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // Check login status
-    window.auth.checkLogin().then(setIsLoggedIn);
+    // Check login status on mount - but don't auto-login from stored cookie
+    // User should explicitly login via QR code
+    console.log('[App] App mounted, NOT checking stored cookie');
+    // window.auth.checkLogin().then(status => {
+    //   console.log('[App] Login status:', status);
+    //   setIsLoggedIn(status);
+    // });
 
     // Listen to download events
     const unsubscribers = [

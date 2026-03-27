@@ -7,6 +7,7 @@ import { downloadEngine, DownloadTask } from './download/engine';
 import { DownloadOptions } from './bilibili/types';
 import { initDatabase, insertDownload, updateDownloadStatus, getAllDownloads, deleteDownload } from './storage/database';
 import { setFfmpegPath } from './utils/ffmpeg';
+import './utils/logger'; // Enable logging to file
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -43,6 +44,16 @@ function createWindow() {
 app.whenReady().then(() => {
   initDatabase();
   setFfmpegPath();
+  
+  // Load saved cookie on startup
+  const loadedCookie = authManager.loadCookie();
+  if (loadedCookie) {
+    console.log('[Main] Loaded saved cookie from store');
+    // Don't auto-validate, just keep it for use
+  } else {
+    console.log('[Main] No saved cookie found');
+  }
+  
   createWindow();
 
   app.on('activate', () => {
@@ -74,11 +85,16 @@ ipcMain.handle('auth:import-cookie', async (_, cookie: string) => {
 });
 
 ipcMain.handle('auth:check-login', async () => {
-  return await authManager.validateCookie();
+  const result = await authManager.validateCookie();
+  console.log('[IPC] auth:check-login result:', result);
+  return result;
 });
 
 ipcMain.handle('auth:logout', async () => {
+  console.log('[IPC] auth:logout requested');
+  console.log('[IPC] loginStatus before logout:', authManager.isLoggedIn());
   await authManager.logout();
+  console.log('[IPC] loginStatus after logout:', authManager.isLoggedIn());
   return true;
 });
 
@@ -152,6 +168,7 @@ downloadEngine.on('task-created', (task: DownloadTask) => {
   insertDownload({
     id: task.id,
     bvid: task.bvid,
+    aid: task.aid,
     cid: task.cid,
     title: task.title,
     cover: '',
