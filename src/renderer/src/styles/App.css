@@ -1,0 +1,108 @@
+// src/renderer/src/styles/App.css
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid var(--border-color);
+  -webkit-app-region: drag;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  font-size: 28px;
+}
+
+.logo h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin: 0;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.nav-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.nav-btn.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+.nav-btn .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: var(--error-color);
+  color: white;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-status {
+  -webkit-app-region: no-drag;
+}
+
+.status-logged-in {
+  padding: 6px 12px;
+  background: #e8f5e9;
+  color: #388e3c;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-not-logged-in {
+  padding: 6px 12px;
+  background: #f5f5f5;
+  color: #888;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+}

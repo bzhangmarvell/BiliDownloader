@@ -1,0 +1,180 @@
+.task-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.2s;
+}
+
+.task-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.task-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.task-title {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+  flex: 1;
+}
+
+.task-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.status-pending {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.status-downloading {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-merging {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.status-completed {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.status-error {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.status-paused {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00a1d6, #008bc0);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #666;
+}
+
+.progress-percent {
+  font-weight: 600;
+  color: #00a1d6;
+}
+
+.merging-indicator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #f57c00;
+  font-size: 14px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffe0b2;
+  border-top-color: #f57c00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  padding: 8px 12px;
+  background: #ffebee;
+  color: #c62828;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.task-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #888;
+}
+
+.task-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #f5f5f5;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background: #e0e0e0;
+  transform: scale(1.05);
+}
+
+.pause-btn:hover {
+  background: #fff3e0;
+}
+
+.retry-btn:hover {
+  background: #e3f2fd;
+}
+
+.delete-btn:hover {
+  background: #ffebee;
+}
