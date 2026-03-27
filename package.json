@@ -1,13 +1,14 @@
 {
   "name": "bilidownloader",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "哔哩哔哩视频下载器 - Bilibili Video Downloader",
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:main && npm run build:renderer && electron-builder",
+    "build": "npm run build:main && npm run build:renderer && electron-builder && npm run release",
     "build:main": "tsc -p tsconfig.main.json",
     "build:renderer": "vite build",
+    "release": "node scripts/release.js",
     "electron:dev": "vite",
     "electron:build": "electron-builder",
     "pack": "electron-builder --dir",
