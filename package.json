@@ -57,6 +57,9 @@
       "dist/**/*",
       "resources/**/*"
     ],
+    "asarUnpack": [
+      "resources/ffmpeg/**/*"
+    ],
     "mac": {
       "target": "dmg",
       "icon": "build/icon.icns"
