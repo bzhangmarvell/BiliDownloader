@@ -14,11 +14,11 @@
 
 ## 🛠 技术栈
 
-- **框架**: Electron 28 + React 18 + TypeScript
-- **构建工具**: Vite 5 + electron-builder
-- **状态管理**: Zustand
-- **数据库**: better-sqlite3
-- **视频处理**: fluent-ffmpeg
+- **框架**: Electron 31 + React 18 + TypeScript 5
+- **构建工具**: Vite 5 + electron-builder 25
+- **状态管理**: React hooks
+- **数据库**: better-sqlite3 12
+- **视频处理**: fluent-ffmpeg + 内置 ffmpeg
 - **HTTP 客户端**: Axios
 
 ## 📦 安装
@@ -35,15 +35,15 @@ cd BiliDownloader
 npm install
 ```
 
-### 3. 准备 ffmpeg
+### 3. ffmpeg（可选）
 
-下载对应平台的 ffmpeg 可执行文件，放入 `resources/ffmpeg/` 目录：
+应用已内置 ffmpeg，无需手动下载。
+
+如需使用自定义版本，可将 ffmpeg 放入 `resources/ffmpeg/` 目录：
 
 - **Windows**: `ffmpeg.exe`
 - **macOS**: `ffmpeg`
 - **Linux**: `ffmpeg`
-
-可以从 https://ffmpeg.org/download.html 下载
 
 ## 🚀 开发
 
@@ -51,17 +51,16 @@ npm install
 # 安装依赖 (Node 22 + Electron 31)
 npm install
 
-# 重建 better-sqlite3 以适配 Electron
-npm run rebuild
-
 # 开发模式
-npm run electron:dev
+npm run dev
 ```
+
+> 注意：better-sqlite3 会在 `npm run build` 时自动重建以适配 Electron 版本。
 
 ## 📦 构建
 
 ```bash
-# 构建当前平台
+# 构建当前平台 (自动增加版本号)
 npm run build
 
 # 构建 Windows
@@ -74,7 +73,9 @@ npm run dist:mac
 npm run dist:linux
 ```
 
-构建产物在 `release/` 目录。
+构建产物在 `release/` 目录。macOS 会生成 `.dmg` 安装包。
+
+> 提示：构建完成后会自动增加 patch 版本号并推送到 GitHub。
 
 ## ⚙️ 环境要求
 
@@ -87,47 +88,43 @@ npm run dist:linux
 ```
 BiliDownloader/
 ├── package.json              # 项目配置
-├── tsconfig.json            # TypeScript 配置
-├── vite.config.ts           # Vite 配置
-├── electron-builder.json    # 打包配置
+├── tsconfig.json             # TypeScript 配置
+├── vite.config.ts            # Vite 配置
 │
 ├── src/
-│   ├── main/                # Electron 主进程
-│   │   ├── index.ts         # 主进程入口
-│   │   ├── preload.ts       # 预加载脚本
-│   │   ├── bilibili/        # B 站 API 模块
-│   │   │   ├── api.ts       # API 封装
-│   │   │   ├── auth.ts      # 登录认证
-│   │   │   └── types.ts     # 类型定义
+│   ├── main/                 # Electron 主进程
+│   │   ├── index.ts          # 主进程入口
+│   │   ├── preload.ts        # 预加载脚本
+│   │   ├── bilibili/         # B 站 API 模块
+│   │   │   ├── api.ts        # API 封装
+│   │   │   ├── auth.ts       # 登录认证
+│   │   │   └── types.ts      # 类型定义
 │   │   ├── download/        # 下载引擎
-│   │   │   └── engine.ts    # 下载核心逻辑
-│   │   ├── storage/         # 数据存储
-│   │   │   └── database.ts  # SQLite 封装
-│   │   └── utils/           # 工具函数
-│   │       └── ffmpeg.ts    # ffmpeg 工具
+│   │   │   └── engine.ts     # 下载核心逻辑
+│   │   ├── storage/          # 数据存储
+│   │   │   └── database.ts   # SQLite 封装
+│   │   └── utils/            # 工具函数
+│   │       ├── ffmpeg.ts     # ffmpeg 工具
+│   │       └── logger.ts     # 日志工具
 │   │
-│   └── renderer/            # React 渲染进程
+│   └── renderer/             # React 渲染进程
 │       ├── index.html
 │       └── src/
-│           ├── main.tsx     # 渲染进程入口
-│           ├── App.tsx      # 主组件
-│           ├── pages/       # 页面组件
-│           │   ├── Download.tsx
-│           │   ├── Tasks.tsx
-│           │   └── Settings.tsx
-│           ├── components/  # 可复用组件
-│           │   ├── VideoCard.tsx
-│           │   ├── TaskItem.tsx
-│           │   └── QualitySelect.tsx
-│           ├── store/       # 状态管理
-│           │   └── downloadStore.ts
-│           └── styles/      # 样式文件
+│           ├── main.tsx      # 渲染进程入口
+│           ├── App.tsx       # 主组件
+│           └── pages/        # 页面组件
+│               ├── Download.tsx
+│               ├── Tasks.tsx
+│               └── Settings.tsx
 │
 ├── resources/
-│   └── ffmpeg/              # ffmpeg 可执行文件
+│   └── ffmpeg/               # ffmpeg 可执行文件 (内置)
 │
-└── build/                   # 打包资源
-    └── icon.png
+├── scripts/
+│   └── release.js            # 自动发布脚本
+│
+└── build/                    # 打包资源
+    └── icon.icns / icon.ico
 ```
 
 ## 🔌 API 说明
