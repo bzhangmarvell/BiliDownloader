@@ -1,6 +1,6 @@
 {
   "name": "bilidownloader",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "哔哩哔哩视频下载器 - Bilibili Video Downloader",
   "main": "dist/main/index.js",
   "scripts": {
