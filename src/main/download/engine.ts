@@ -452,6 +452,9 @@ export class DownloadEngine extends EventEmitter {
     
     for (const video of filteredVideos) {
       const videoInfo = await bilibiliAPI.getVideoInfo(video.bvid);
+      
+      // 添加延迟避免触发频率限制（每次请求间隔 200ms）
+      await new Promise(resolve => setTimeout(resolve, 200));
       let outputDir = options.outputPath;
       if (outputDir.startsWith('~')) {
         outputDir = path.join(process.env.HOME || '', outputDir.slice(1));
