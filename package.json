@@ -5,10 +5,10 @@
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:main && npm run build:renderer && electron-builder && npm run release",
+    "build": "npm run build:main && npm run build:renderer && electron-builder",
     "build:main": "tsc -p tsconfig.main.json",
     "build:renderer": "vite build",
-    "release": "node scripts/release.js",
+    "release": "echo 'Manual release - update version in package.json'",
     "electron:dev": "vite",
     "electron:build": "electron-builder",
     "pack": "electron-builder --dir",
