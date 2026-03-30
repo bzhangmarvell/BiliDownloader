@@ -161,6 +161,69 @@ ipcMain.handle('fs:select-folder', async () => {
   return { success: !result.canceled, path: result.filePaths[0] };
 });
 
+// ============ 批量下载相关 IPC ============
+
+// 获取 UP 主信息
+ipcMain.handle('up:get-info', async (_, mid: number) => {
+  try {
+    const info = await authManager.getUpInfo(mid);
+    return { success: true, info };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 获取 UP 主视频列表
+ipcMain.handle('up:get-videos', async (_, mid: number, maxPage: number = 0) => {
+  try {
+    const videos = await authManager.fetchAllUpVideos(mid, maxPage);
+    return { success: true, videos };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 创建批量任务
+ipcMain.handle('batch:create-task', async (_, options: any) => {
+  try {
+    const task = await downloadEngine.createBatchTask(options);
+    return { success: true, task };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 启动批量任务
+ipcMain.handle('batch:start-task', async (_, batchId: string) => {
+  try {
+    await downloadEngine.startBatchTask(batchId);
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+});
+
+// 暂停批量任务
+ipcMain.handle('batch:pause-task', async (_, batchId: string) => {
+  downloadEngine.pauseBatchTask(batchId);
+  return { success: true };
+});
+
+// 恢复批量任务
+ipcMain.handle('batch:resume-task', async (_, batchId: string) => {
+  await downloadEngine.resumeBatchTask(batchId);
+  return { success: true };
+});
+
+// 获取批量任务
+ipcMain.handle('batch:get-task', async (_, batchId: string) => {
+  const task = downloadEngine.getBatchTask(batchId);
+  if (task) {
+    return { success: true, task };
+  }
+  return { success: false, error: 'Task not found' };
+});
+
 // Download events forwarding to renderer
 downloadEngine.on('task-created', (task: DownloadTask) => {
   mainWindow?.webContents.send('download:task-created', task);
@@ -208,6 +271,27 @@ downloadEngine.on('task-paused', (task: DownloadTask) => {
 downloadEngine.on('task-cancelled', (task: DownloadTask) => {
   mainWindow?.webContents.send('download:task-cancelled', task);
   deleteDownload(task.id);
+});
+
+// 批量任务事件转发
+downloadEngine.on('batch-task-created', (task: any) => {
+  mainWindow?.webContents.send('batch:task-created', task);
+});
+
+downloadEngine.on('batch-task-started', (task: any) => {
+  mainWindow?.webContents.send('batch:task-started', task);
+});
+
+downloadEngine.on('batch-task-progress', (task: any) => {
+  mainWindow?.webContents.send('batch:task-progress', task);
+});
+
+downloadEngine.on('batch-task-completed', (task: any) => {
+  mainWindow?.webContents.send('batch:task-completed', task);
+});
+
+downloadEngine.on('batch-task-paused', (task: any) => {
+  mainWindow?.webContents.send('batch:task-paused', task);
 });
 
 // Export for preload
