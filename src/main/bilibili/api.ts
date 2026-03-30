@@ -452,6 +452,8 @@ export class BilibiliAPI {
     total: number,
     hasMore: boolean
   }> {
+    console.log('[API] getUpVideos called with mid:', mid, 'cookie:', this.cookie ? `${this.cookie.substring(0, 20)}...` : 'NONE');
+    
     const data = await this.requestWithCookie<any>(
       'https://api.bilibili.com/x/space/wbi/arc/search',
       { mid, pn, ps },
@@ -470,6 +472,8 @@ export class BilibiliAPI {
     }));
     
     const totalCount = data.page?.count || 0;
+    
+    console.log('[API] getUpVideos success, videos:', videos.length);
     
     return {
       videos,
