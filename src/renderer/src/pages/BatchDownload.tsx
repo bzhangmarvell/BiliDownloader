@@ -328,10 +328,13 @@ export default function BatchDownloadPage() {
           <div className="video-list-section">
             <div className="list-header">
               <h3>视频列表 (已选择 {selectedVideos.size}/{videos.length})</h3>
-              <div className="selection-actions">
+              <div className="list-actions">
                 <button onClick={handleSelectAll}>全选</button>
                 <button onClick={handleInvertSelection}>反选</button>
                 <button onClick={handleDeselectAll}>取消选择</button>
+                <button onClick={handleStartBatch} disabled={isDownloading || selectedVideos.size === 0} className="start-btn">
+                  {isDownloading ? '下载中...' : `开始下载 (${selectedVideos.size})`}
+                </button>
               </div>
             </div>
             {loadingVideos ? (
