@@ -102,3 +102,12 @@ contextBridge.exposeInMainWorld('database', {
 contextBridge.exposeInMainWorld('fs', {
   selectFolder: () => ipcRenderer.invoke('fs:select-folder'),
 } as FileSystemAPI);
+
+// 通用 API（用于批量下载等功能）
+contextBridge.exposeInMainWorld('api', {
+  invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
+  on: (channel: string, callback: (...args: any[]) => void) => {
+    const listener = (_: any, ...eventArgs: any[]) => callback(...eventArgs);
+    ipcRenderer.on(channel, listener);
+  },
+});
