@@ -126,6 +126,16 @@ export class AuthManager {
   isLoggedIn(): boolean {
     return this.loginStatus;
   }
+
+  // ============ 批量下载相关代理方法 ============
+
+  async getUpInfo(mid: number) {
+    return await bilibiliAPI.getUpInfo(mid);
+  }
+
+  async fetchAllUpVideos(mid: number, maxPage: number = 0) {
+    return await bilibiliAPI.fetchAllUpVideos(mid, maxPage);
+  }
 }
 
 export const authManager = AuthManager.getInstance();

@@ -5,7 +5,7 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 import { bilibiliAPI } from '../bilibili/api';
-import { DashInfo, DownloadOptions } from '../bilibili/types';
+import { DashInfo, DownloadOptions, BatchDownloadOptions, BatchTask, UpVideo } from '../bilibili/types';
 import { ffmpegMerge } from '../utils/ffmpeg';
 
 export interface DownloadTask {
@@ -35,6 +35,7 @@ interface DownloadConfig {
 export class DownloadEngine extends EventEmitter {
   private tasks: Map<string, DownloadTask> = new Map();
   private activeDownloads: Map<string, any> = new Map();
+  private batchTasks: Map<string, BatchTask> = new Map();
   private config: DownloadConfig = {
     maxConcurrent: 3,
     chunkSize: 1024 * 1024, // 1MB
@@ -365,6 +366,187 @@ export class DownloadEngine extends EventEmitter {
 
   setConfig(config: Partial<DownloadConfig>): void {
     this.config = { ...this.config, ...config };
+  }
+
+  // ============ 批量下载相关方法 ============
+
+  // 辅助方法：解析时长
+  private parseDuration(length: string): number {
+    const parts = length.split(':').map(Number);
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+    return 0;
+  }
+
+  // 辅助方法：过滤视频
+  private filterVideos(videos: UpVideo[], options: BatchDownloadOptions): UpVideo[] {
+    let filtered = videos;
+    
+    if (options.filterKeyword) {
+      const keyword = options.filterKeyword.toLowerCase();
+      filtered = filtered.filter(v => v.title.toLowerCase().includes(keyword));
+    }
+    
+    if (options.dateRange) {
+      const { start, end } = options.dateRange;
+      filtered = filtered.filter(v => {
+        if (start && v.created < start) return false;
+        if (end && v.created > end) return false;
+        return true;
+      });
+    }
+    
+    return filtered;
+  }
+
+  // 辅助方法：排序视频
+  private sortVideos(videos: UpVideo[], sortBy: string): UpVideo[] {
+    return [...videos].sort((a, b) => {
+      switch (sortBy) {
+        case 'created_desc': return b.created - a.created;
+        case 'created_asc': return a.created - b.created;
+        case 'title_asc': return a.title.localeCompare(b.title, 'zh-CN');
+        case 'title_desc': return b.title.localeCompare(a.title, 'zh-CN');
+        case 'play_desc': return b.play - a.play;
+        case 'play_asc': return a.play - b.play;
+        case 'duration_desc': return this.parseDuration(b.length) - this.parseDuration(a.length);
+        case 'duration_asc': return this.parseDuration(a.length) - this.parseDuration(b.length);
+        default: return b.created - a.created;
+      }
+    });
+  }
+
+  // 创建批量任务
+  async createBatchTask(options: BatchDownloadOptions): Promise<BatchTask> {
+    const upInfo = await bilibiliAPI.getUpInfo(options.mid);
+    const maxPage = options.maxCount ? Math.ceil(options.maxCount / 30) : 0;
+    const allVideos = await bilibiliAPI.fetchAllUpVideos(options.mid, maxPage);
+    
+    let filteredVideos = this.filterVideos(allVideos, options);
+    filteredVideos = this.sortVideos(filteredVideos, options.sortBy);
+    
+    if (options.maxCount && options.maxCount > 0) {
+      filteredVideos = filteredVideos.slice(0, options.maxCount);
+    }
+    
+    if (options.selectedVideos && options.selectedVideos.length > 0) {
+      const selectedSet = new Set(options.selectedVideos);
+      filteredVideos = filteredVideos.filter(v => selectedSet.has(v.bvid));
+    }
+    
+    const batchTask: BatchTask = {
+      id: `batch_${options.mid}_${Date.now()}`,
+      mid: options.mid,
+      upName: upInfo.name,
+      upFace: upInfo.face,
+      totalVideos: allVideos.length,
+      selectedCount: filteredVideos.length,
+      downloadedCount: 0,
+      failedCount: 0,
+      status: 'pending',
+      progress: 0,
+      tasks: [],
+      failedVideos: [],
+      createdAt: Date.now(),
+    };
+    
+    for (const video of filteredVideos) {
+      const videoInfo = await bilibiliAPI.getVideoInfo(video.bvid);
+      let outputDir = options.outputPath;
+      if (outputDir.startsWith('~')) {
+        outputDir = path.join(process.env.HOME || '', outputDir.slice(1));
+      }
+      const upFolder = path.join(outputDir, upInfo.name);
+      if (!fs.existsSync(upFolder)) {
+        fs.mkdirSync(upFolder, { recursive: true });
+      }
+      
+      const task: DownloadTask = {
+        id: `${video.bvid}_${videoInfo.cid}_${Date.now()}`,
+        bvid: video.bvid,
+        aid: video.aid,
+        cid: videoInfo.cid,
+        title: video.title,
+        quality: options.quality,
+        status: 'pending',
+        progress: 0,
+        speed: 0,
+        outputPath: path.join(upFolder, `${video.title} [${video.bvid}].mp4`),
+        createdAt: Date.now(),
+      };
+      
+      batchTask.tasks.push(task);
+      this.tasks.set(task.id, task);
+    }
+    
+    this.batchTasks.set(batchTask.id, batchTask);
+    this.emit('batch-task-created', batchTask);
+    
+    return batchTask;
+  }
+
+  // 启动批量任务
+  async startBatchTask(batchId: string): Promise<void> {
+    const batchTask = this.batchTasks.get(batchId);
+    if (!batchTask) throw new Error(`Batch task ${batchId} not found`);
+    
+    batchTask.status = 'running';
+    this.emit('batch-task-started', batchTask);
+    
+    for (const task of batchTask.tasks) {
+      const currentBatchTask = this.batchTasks.get(batchId);
+      if (!currentBatchTask || currentBatchTask.status === 'paused' || currentBatchTask.status === 'error') {
+        break;
+      }
+      
+      if (task.status === 'completed') {
+        batchTask.downloadedCount++;
+        continue;
+      }
+      
+      batchTask.currentTask = task.id;
+      this.emit('batch-task-progress', batchTask);
+      
+      try {
+        await this.startTask(task.id);
+        batchTask.downloadedCount++;
+      } catch (error: any) {
+        batchTask.failedCount++;
+        batchTask.failedVideos.push({ bvid: task.bvid, title: task.title, error: error.message });
+      }
+      
+      batchTask.progress = (batchTask.downloadedCount / batchTask.tasks.length) * 100;
+      this.emit('batch-task-progress', batchTask);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    batchTask.status = 'completed';
+    batchTask.completedAt = Date.now();
+    batchTask.currentTask = undefined;
+    this.emit('batch-task-completed', batchTask);
+  }
+
+  // 暂停批量任务
+  pauseBatchTask(batchId: string): void {
+    const batchTask = this.batchTasks.get(batchId);
+    if (batchTask && batchTask.status === 'running') {
+      batchTask.status = 'paused';
+      this.emit('batch-task-paused', batchTask);
+    }
+  }
+
+  // 恢复批量任务
+  async resumeBatchTask(batchId: string): Promise<void> {
+    const batchTask = this.batchTasks.get(batchId);
+    if (batchTask && batchTask.status === 'paused') {
+      batchTask.status = 'running';
+      await this.startBatchTask(batchId);
+    }
+  }
+
+  // 获取批量任务
+  getBatchTask(batchId: string): BatchTask | undefined {
+    return this.batchTasks.get(batchId);
   }
 }
 

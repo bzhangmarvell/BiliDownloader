@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 import crypto from 'crypto';
-import { VideoInfo, VideoPage, PlayUrl, DashInfo, DashStream } from './types';
+import { VideoInfo, VideoPage, PlayUrl, DashInfo, DashStream, UpInfo, UpVideo } from './types';
 
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
@@ -393,6 +393,111 @@ export class BilibiliAPI {
     } catch {
       return false;
     }
+  }
+
+  // ============ 批量下载相关 API ============
+
+  // 需要登录 cookie 的请求
+  private async requestWithCookie<T>(url: string, params?: Record<string, any>, useWbi = false): Promise<T> {
+    const defaultParams: Record<string, any> = { ...params };
+
+    if (!this.cookie) {
+      throw new Error('请先登录 B 站账号');
+    }
+
+    if (useWbi) {
+      await getWbiKeys();
+      encWbi(defaultParams);
+    }
+
+    const response = await axios.get(url, {
+      params: defaultParams,
+      headers: {
+        'User-Agent': USER_AGENT,
+        'Cookie': this.cookie,
+        'Referer': 'https://www.bilibili.com',
+      },
+    });
+
+    if (response.data.code !== 0) {
+      if (response.data.code === -352) {
+        throw new Error('风控校验失败，请确保已登录且账号正常');
+      }
+      throw new Error(`API Error: ${response.data.message || response.data.code}`);
+    }
+
+    return response.data.data;
+  }
+
+  // 获取 UP 主信息
+  async getUpInfo(mid: number): Promise<UpInfo> {
+    const data = await this.requestWithCookie<any>(
+      'https://api.bilibili.com/x/space/acc/info',
+      { mid },
+      true
+    );
+    
+    return {
+      mid: data.mid,
+      name: data.name,
+      face: data.face,
+      fans: data.fans,
+      videoCount: data.videos?.count || 0,
+    };
+  }
+
+  // 获取 UP 主视频列表（单页）
+  async getUpVideos(mid: number, pn: number = 1, ps: number = 30): Promise<{
+    videos: UpVideo[],
+    total: number,
+    hasMore: boolean
+  }> {
+    const data = await this.requestWithCookie<any>(
+      'https://api.bilibili.com/x/space/wbi/arc/search',
+      { mid, pn, ps },
+      true
+    );
+    
+    const videos: UpVideo[] = (data.list?.vlist || []).map((v: any) => ({
+      bvid: v.bvid,
+      aid: v.aid,
+      title: v.title,
+      cover: v.pic,
+      length: v.length,
+      created: v.created,
+      play: v.play,
+      cid: v.cid,
+    }));
+    
+    const totalCount = data.page?.count || 0;
+    
+    return {
+      videos,
+      total: totalCount,
+      hasMore: videos.length * pn < totalCount,
+    };
+  }
+
+  // 获取 UP 主全部视频（自动分页）
+  async fetchAllUpVideos(mid: number, maxPage: number = 0): Promise<UpVideo[]> {
+    const allVideos: UpVideo[] = [];
+    let pn = 1;
+    const ps = 30;
+    
+    while (true) {
+      console.log(`[API] Fetching page ${pn} for UP ${mid}`);
+      const { videos, hasMore } = await this.getUpVideos(mid, pn, ps);
+      allVideos.push(...videos);
+      
+      if (!hasMore) break;
+      if (maxPage > 0 && pn >= maxPage) break;
+      
+      pn++;
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    console.log(`[API] Fetched ${allVideos.length} videos for UP ${mid}`);
+    return allVideos;
   }
 }
 
