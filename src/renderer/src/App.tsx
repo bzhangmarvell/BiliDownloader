@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import DownloadPage from './pages/Download';
+import BatchDownloadPage from './pages/BatchDownload';
 import TasksPage from './pages/Tasks';
 import SettingsPage from './pages/Settings';
 import './styles/App.css';
 
-type Page = 'download' | 'tasks' | 'settings';
+type Page = 'download' | 'batch' | 'tasks' | 'settings';
 
 interface DownloadTask {
   id: string;
@@ -25,6 +26,10 @@ interface DownloadTask {
 
 declare global {
   interface Window {
+    api: {
+      invoke: (channel: string, ...args: any[]) => Promise<any>;
+      on: (channel: string, cb: (...args: any[]) => void) => void;
+    };
     auth: {
       getQRCode: () => Promise<{ qrKey: string; url: string }>;
       pollQRStatus: (qrKey: string) => Promise<{ success: boolean; cookie?: string }>;
@@ -101,6 +106,8 @@ function App() {
     switch (currentPage) {
       case 'download':
         return <DownloadPage onTaskCreated={(task) => setTasks(prev => [...prev, task])} />;
+      case 'batch':
+        return <BatchDownloadPage />;
       case 'tasks':
         return <TasksPage tasks={tasks} setTasks={setTasks} />;
       case 'settings':
@@ -122,7 +129,13 @@ function App() {
             className={`nav-btn ${currentPage === 'download' ? 'active' : ''}`}
             onClick={() => setCurrentPage('download')}
           >
-            新建下载
+            单视频下载
+          </button>
+          <button 
+            className={`nav-btn ${currentPage === 'batch' ? 'active' : ''}`}
+            onClick={() => setCurrentPage('batch')}
+          >
+            批量下载
           </button>
           <button 
             className={`nav-btn ${currentPage === 'tasks' ? 'active' : ''}`}
