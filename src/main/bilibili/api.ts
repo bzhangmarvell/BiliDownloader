@@ -55,8 +55,8 @@ function encWbi(params: Record<string, any>): Record<string, any> {
   return params;
 }
 
-// 获取 WBI 密钥
-async function getWbiKeys(): Promise<{ imgKey: string; subKey: string }> {
+// 获取 WBI 密钥 - 需要传入 cookie 来通过风控
+async function getWbiKeys(cookie?: string): Promise<{ imgKey: string; subKey: string }> {
   if (imgKey && subKey) {
     return { imgKey, subKey };
   }
@@ -64,6 +64,8 @@ async function getWbiKeys(): Promise<{ imgKey: string; subKey: string }> {
   const response = await axios.get('https://api.bilibili.com/x/web-interface/nav', {
     headers: {
       'User-Agent': USER_AGENT,
+      'Referer': 'https://www.bilibili.com',
+      ...(cookie ? { 'Cookie': cookie } : {}),
     },
   });
 
@@ -99,7 +101,7 @@ export class BilibiliAPI {
 
     // 如果需要 WBI 签名
     if (useWbi) {
-      await getWbiKeys();
+      await getWbiKeys(this.cookie);
       encWbi(defaultParams);
       console.log('[API] WBI signed params:', { ...defaultParams, w_rid: '***' });
     }
@@ -401,12 +403,14 @@ export class BilibiliAPI {
   private async requestWithCookie<T>(url: string, params?: Record<string, any>, useWbi = false): Promise<T> {
     const defaultParams: Record<string, any> = { ...params };
 
+    console.log('[API] requestWithCookie - has cookie:', !!this.cookie, 'cookie length:', this.cookie?.length || 0);
+
     if (!this.cookie) {
       throw new Error('请先登录 B 站账号');
     }
 
     if (useWbi) {
-      await getWbiKeys();
+      await getWbiKeys(this.cookie);
       encWbi(defaultParams);
     }
 
@@ -418,6 +422,8 @@ export class BilibiliAPI {
         'Referer': 'https://www.bilibili.com',
       },
     });
+
+    console.log('[API] requestWithCookie response code:', response.data.code);
 
     if (response.data.code !== 0) {
       if (response.data.code === -352) {

@@ -42,6 +42,9 @@ export class AuthManager {
       if (cookie) {
         await this.saveCookie(cookie);
         log(`[Auth] Cookie saved to store`);
+        // 确保 cookie 已设置到 bilibiliAPI
+        bilibiliAPI.setCookie(cookie);
+        log(`[Auth] Cookie re-set to bilibiliAPI`);
         // Make sure to set loginStatus
         this.loginStatus = true;
         log(`[Auth] loginStatus set to: ${this.loginStatus}`);
